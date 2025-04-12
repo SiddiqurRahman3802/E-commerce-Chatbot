@@ -33,9 +33,6 @@ def clean_text(text: str) -> str:
     # Remove URLs
     text = re.sub(r'http\S+|www\S+|https\S+', '', text)
     
-    # Replace entity placeholders with standardized format
-    text = re.sub(r'\{\{.*?\}\}', '<ENTITY>', text)
-    
     # Remove multiple spaces and newlines
     text = re.sub(r'\s+', ' ', text)
     
@@ -67,18 +64,6 @@ def extract_language_features(tags: str) -> Dict[str, int]:
     }
     return features
 
-def extract_entities(text: str) -> List[str]:
-    """
-    Extract entity placeholders from text.
-    
-    Args:
-        text: Input text containing entity placeholders
-    Returns:
-        List of extracted entities
-    """
-    entities = re.findall(r'\{\{(.*?)\}\}', text)
-    return entities
-
 def preprocess_ecommerce_dataset(df: pd.DataFrame) -> pd.DataFrame:
     """
     Preprocess the e-commerce dataset with feature engineering.
@@ -101,10 +86,6 @@ def preprocess_ecommerce_dataset(df: pd.DataFrame) -> pd.DataFrame:
         df_processed,
         pd.DataFrame(language_features.tolist())
     ], axis=1)
-    
-    # Extract entities
-    df_processed['entities'] = df_processed['instruction'].apply(extract_entities)
-    df_processed['entity_count'] = df_processed['entities'].apply(len)
     
     # Add e-commerce specific features
     df_processed['instruction_length'] = df_processed['clean_instruction'].apply(len)
@@ -154,29 +135,3 @@ def preprocess_ecommerce_dataset(df: pd.DataFrame) -> pd.DataFrame:
     
     return df_processed
 
-def get_feature_names(df: pd.DataFrame) -> List[str]:
-    """
-    Get list of engineered feature names.
-    
-    Args:
-        df: Processed DataFrame
-    Returns:
-        List of feature column names
-    """
-    # Identify numeric and boolean columns that were added during preprocessing
-    feature_columns = [col for col in df.columns if col.startswith(('is_', 'has_', 'starts_with_')) or 
-                      col in ['category_code', 'intent_code', 'instruction_length', 'response_length', 
-                             'word_count', 'entity_count']]
-    return feature_columns
-
-if __name__ == "__main__":
-    # Example usage
-    file_path = "data/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv"
-    
-    # Load and preprocess the dataset
-    raw_df = load_dataset(file_path)
-    processed_df = preprocess_ecommerce_dataset(raw_df)
-    
-    # Get feature names
-    features = get_feature_names(processed_df)
-    print(f"Generated {len(features)} features for the e-commerce chatbot model")
