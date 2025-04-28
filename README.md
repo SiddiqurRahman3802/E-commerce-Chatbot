@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+# E-commerce-Chatbot
+=======
 # E-commerce Chatbot Project
 
 ## Project Structure
@@ -31,3 +34,4 @@
 │   └── package.json               # front-end project dependencies
 └── README.md                       # project overview and instructions
 ```
+>>>>>>> Austin
