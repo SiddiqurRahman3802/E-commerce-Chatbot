@@ -15,7 +15,7 @@ output_path = f"data/processed/{output_filename}"
 print(f"Processing data with strategy: {strategy}")
 
 # Initialize with your raw data path
-processor = EcommerceDataProcessor("data/raw/bitext-retail-ecom...csv")
+processor = EcommerceDataProcessor("data/raw/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv")
 
 # Run the full processing pipeline
 processed_df = processor.run()
