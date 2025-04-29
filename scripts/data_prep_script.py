@@ -34,7 +34,7 @@ subprocess.run(["git", "tag", "-a", tag_name, "-m", f"Dataset processed at {time
 
 # Push everything
 subprocess.run(["dvc", "push"], check=True)
-subprocess.run(["git", "push", "origin", "main"], check=True)
+subprocess.run(["git", "push", "origin", "Austin"], check=True)
 subprocess.run(["git", "push", "--tags"], check=True)
 
 print(f"Dataset tracked with DVC and tagged as: {tag_name}")
