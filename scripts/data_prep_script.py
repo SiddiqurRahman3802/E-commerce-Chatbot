@@ -4,6 +4,7 @@ from datetime import datetime
 import subprocess
 import os
 
+print("Script starting...")
 # Ask user for strategy interactively
 strategy = input("Enter preprocessing strategy (e.g., raw data, new_features_data, etc.): ")
 
