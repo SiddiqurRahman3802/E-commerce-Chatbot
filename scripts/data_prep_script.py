@@ -23,19 +23,19 @@ processed_df = processor.run()
 processed_df.to_csv(output_path, index=False)
 print(f"Saved processed dataset to {output_path}")
 
-# Track with DVC
-# subprocess.run(["dvc", "add", output_path], check=True)
-# subprocess.run(["git", "add", f"{output_path}.dvc"], check=True)
-# subprocess.run(["git", "commit", "-m", f"Add dataset ({timestamp})"], check=True)
+#Track with DVC
+subprocess.run(["dvc", "add", output_path], check=True)
+subprocess.run(["git", "add", f"{output_path}.dvc"], check=True)
+subprocess.run(["git", "commit", "-m", f"Add dataset ({timestamp})"], check=True)
 
-# # Create a tag for this dataset version
-# tag_name = f"data-{timestamp}"
-# subprocess.run(["git", "tag", "-a", tag_name, "-m", f"Dataset processed at {timestamp}"], check=True)
+# Create a tag for this dataset version
+tag_name = f"data-{timestamp}"
+subprocess.run(["git", "tag", "-a", tag_name, "-m", f"Dataset processed at {timestamp}"], check=True)
 
-# # Push everything
-# subprocess.run(["dvc", "push"], check=True)
-# subprocess.run(["git", "push", "origin", "main"], check=True)
-# subprocess.run(["git", "push", "--tags"], check=True)
+# Push everything
+subprocess.run(["dvc", "push"], check=True)
+subprocess.run(["git", "push", "origin", "main"], check=True)
+subprocess.run(["git", "push", "--tags"], check=True)
 
-# print(f"Dataset tracked with DVC and tagged as: {tag_name}")
+print(f"Dataset tracked with DVC and tagged as: {tag_name}")
 print(f"Dataset processed as processed_dataset_{timestamp}.csv")
