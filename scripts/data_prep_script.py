@@ -1,8 +1,11 @@
 # Import the processor
+import sys
+import os
+sys.path.append(os.getcwd())  # Add current directory to path
 from src.data_prep import EcommerceDataProcessor
 from datetime import datetime
+from ..src.data_prep import EcommerceDataProcessor
 import subprocess
-import os
 
 print("Script starting...")
 # Ask user for strategy interactively
