@@ -23,6 +23,11 @@ processed_df = processor.run()
 processed_df.to_csv(output_path, index=False)
 print(f"Saved processed dataset to {output_path}")
 
+
+# Set Git identity before committing
+subprocess.run(["git", "config", "--global", "user.email", "hsupisces@Hotmail.com"], check=False)
+subprocess.run(["git", "config", "--global", "user.name", "ShenghaoisYummy"], check=False)
+
 #Track with DVC
 subprocess.run(["dvc", "add", output_path], check=True)
 subprocess.run(["git", "add", f"{output_path}.dvc"], check=True)
