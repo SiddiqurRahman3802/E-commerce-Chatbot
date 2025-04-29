@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.data_prep import EcommerceDataProcessor
 from datetime import datetime
 import subprocess
+os.makedirs("data/processed", exist_ok=True)
 
 print("Pre-processing data...")
 # Get current timestamp for unique filename
