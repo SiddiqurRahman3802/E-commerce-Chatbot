@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.data_prep import EcommerceDataProcessor
 from datetime import datetime
 import subprocess
+
 os.makedirs("data/processed", exist_ok=True)
 
 print("Pre-processing data...")
@@ -27,6 +28,10 @@ print(f"Saved processed dataset to {output_path}")
 # Set Git identity before committing
 subprocess.run(["git", "config", "--global", "user.email", "hsupisces@Hotmail.com"], check=False)
 subprocess.run(["git", "config", "--global", "user.name", "ShenghaoisYummy"], check=False)
+subprocess.run(['git', 'config', '--global', 'credential.helper', 'store'], check=True)
+with open(os.path.expanduser('~/.git-credentials'), 'w') as f:
+    f.write(f"https://{os.environ['GIT_USERNAME']}:{os.environ['GIT_PASSWORD']}@github.com\n")
+
 
 #Track with DVC
 subprocess.run(["dvc", "add", output_path], check=True)
