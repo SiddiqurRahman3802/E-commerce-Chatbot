@@ -1,0 +1,48 @@
+# configs/sentiment_model_config.yaml
+# Override configuration for sentiment-enhanced model
+
+model:
+  base_model: "deepseek-ai/deepseek-coder-1.3b-instruct"
+
+lora:
+  r: 16 # Higher rank for more capacity
+  alpha: 32
+  dropout: 0.1 # Slightly higher dropout
+
+# Training configuration
+training:
+  epochs: 3
+  batch_size: 8
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-4
+  weight_decay: 0.01
+  warmup_steps: 100
+  max_length: 512
+  fp16: true
+  evaluation_strategy: "epoch"
+  save_strategy: "epoch"
+  save_total_limit: 2
+  load_best_model_at_end: true
+
+# Data configuration
+data:
+  dataset_tag: "data-20250429_101140"
+  dataset_path: "data/processed/processed_dataset_20250429_101140.csv"
+  test_size: 0.1
+  seed: 42
+  instruction_column: "instruction"
+  response_column: "response"
+
+data:
+  dataset_tag: "data-sentiment-20250429_101140"
+  dataset_path: "data/processed/processed_dataset_sentiment_20250429_101140.csv"
+
+output:
+  output_dir: "./results/sentiment_model"
+
+# Generation configuration
+generation:
+  max_new_tokens: 150
+  temperature: 0.7
+  top_p: 0.9
+  do_sample: true

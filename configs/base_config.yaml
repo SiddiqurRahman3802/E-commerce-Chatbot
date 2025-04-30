@@ -1,0 +1,36 @@
+# configs/base_config.yaml
+# Base configuration for e-commerce chatbot fine-tuning
+
+# Model configuration
+model:
+  base_model: "deepseek-ai/deepseek-coder-1.3b-instruct"
+  load_in_8bit: true
+
+# LoRA configuration
+lora:
+  r: 8
+  alpha: 32
+  dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "v_proj"
+    - "k_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+
+# Output configuration
+output:
+  output_dir: "./results"
+  logging_steps: 10
+
+# MLflow configuration
+mlflow:
+  tracking_uri: null # Set via environment or override
+  experiment_name: "ecommerce-chatbot-finetuning"
+
+# Hugging Face Hub configuration
+hub:
+  push_to_hub: false
+  repository_id: null # Will be auto-generated if null

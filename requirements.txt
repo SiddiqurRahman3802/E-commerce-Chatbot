@@ -14,11 +14,13 @@ torch>=2.0.0
 transformers>=4.25.0
 datasets>=2.10.0
 sentence-transformers>=2.2.2
+peft>=0.3.0
 
 # MLOps tools
 mlflow>=2.3.0
 dvc[s3]>=2.10.0
 dagshub>=0.2.0
+pyyaml>=6.0
 
 # AWS integration
 boto3>=1.26.0
