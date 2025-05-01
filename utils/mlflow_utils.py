@@ -46,7 +46,7 @@ def mlflow_setup_tracking(config):
     experiment_name = os.environ.get("MLFLOW_EXPERIMENT_NAME", config.get('mlflow', {}).get('experiment_name'))
     
     # Set up MLflow tracking
-    tracking_uri = mlflow_setup(
+    tracking_uri = mlflow_init(
         mlflow_tracking_uri,
         experiment_name
     )
