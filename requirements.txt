@@ -21,7 +21,7 @@ bitsandbytes>=0.37.1
 mlflow==2.3.0
 dvc[s3]==2.10.0
 dagshub==0.2.0
-pyyaml==6.0
+pyyaml>=5.1
 
 # AWS integration
 boto3==1.26.0
