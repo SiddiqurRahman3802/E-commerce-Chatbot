@@ -1,2 +1,5 @@
 mlflow/
+mlruns/
 src/__pycache__/
+notebooks/
+.env
