@@ -51,7 +51,7 @@ def pull_dataset_by_tag(tag, dataset_path):
             pass
         return False
 
-def setup_environment(config):
+def setup_environment_data(config):
     """
     Set up environment, credentials, and datasets.
     """

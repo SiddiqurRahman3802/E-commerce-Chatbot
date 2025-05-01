@@ -6,7 +6,7 @@ from mlflow.models.signature import ModelSignature
 from mlflow.types.schema import Schema, ColSpec
 
 
-def setup_mlflow(tracking_uri=None, experiment_name=None):
+def mlflow_init(tracking_uri=None, experiment_name=None):
     """
     Set up MLflow tracking.
     """
@@ -18,7 +18,7 @@ def setup_mlflow(tracking_uri=None, experiment_name=None):
         
     return mlflow.get_tracking_uri()
 
-def log_model_info(model):
+def mlflow_log_model_info(model):
     """
     Log model information to MLflow.
     """
@@ -29,7 +29,7 @@ def log_model_info(model):
     mlflow.log_param("total_params", total_params)
     mlflow.log_param("trainable_percentage", 100 * trainable_params / total_params)
 
-def start_run(run_name=None):
+def mlflow_start_run(run_name=None):
     """
     Start a new MLflow run.
     """
@@ -38,7 +38,7 @@ def start_run(run_name=None):
         
     return mlflow.start_run(run_name=run_name)
 
-def setup_mlflow_tracking(config):
+def mlflow_setup_tracking(config):
     """
     Set up MLflow tracking and experiment.
     """
@@ -46,14 +46,14 @@ def setup_mlflow_tracking(config):
     experiment_name = os.environ.get("MLFLOW_EXPERIMENT_NAME", config.get('mlflow', {}).get('experiment_name'))
     
     # Set up MLflow tracking
-    tracking_uri = setup_mlflow(
+    tracking_uri = mlflow_setup(
         mlflow_tracking_uri,
         experiment_name
     )
     print(f"MLflow tracking URI: {tracking_uri}")
     return tracking_uri
 
-def log_model_to_mlflow(model, input_example="### Instruction: What is your return policy?\n\n### Response:"):
+def mlflow_log_model(model, input_example="### Instruction: What is your return policy?\n\n### Response:"):
     """
     Log the model to MLflow with proper signature.
     """

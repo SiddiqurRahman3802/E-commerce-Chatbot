@@ -22,12 +22,12 @@ from src.fine_tuning import (
 
 # Import utility modules
 from utils.mlflow_utils import (
-    log_model_info, 
-    start_run,
-    setup_mlflow_tracking,
-    log_model_to_mlflow
+    mlflow_log_model_info, 
+    mlflow_start_run,
+    mlflow_setup_tracking,
+    mlflow_log_model
 )
-from utils.dvc_utils import setup_environment
+from utils.dvc_utils import setup_environment_data
 from utils.yaml_utils import (
     load_config, 
     save_yaml_config, 
@@ -49,11 +49,11 @@ def main():
     config = load_config()
     
     # Set up environment and data
-    if not setup_environment(config):
+    if not setup_environment_data(config):
         return
     
     # Set up MLflow tracking
-    tracking_uri = setup_mlflow_tracking(config)
+    tracking_uri = mlflow_setup_tracking(config)
     
     # Generate a run ID and set up directories
     run_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -62,7 +62,7 @@ def main():
     run_output_dir = os.path.join(output_dir, run_timestamp)
     
     # Start MLflow run
-    with start_run(run_name) as run:
+    with mlflow_start_run(run_name) as run:
         run_id = run.info.run_id
         
         # Create necessary directories
@@ -112,7 +112,7 @@ def main():
         model = prepare_model_for_lora(model, lora_config)
         
         # Log model info
-        log_model_info(model)
+        mlflow_log_model_info(model)
         
         # Prepare dataset
         dataset_path = config.get('data', {}).get('dataset_path')
@@ -176,7 +176,7 @@ def main():
         mlflow.log_metrics({f"eval_{k}": v for k, v in eval_metrics.items()})
         
         # Log model to MLflow
-        log_model_to_mlflow(model)
+        mlflow_log_model(model)
         
         # Optional: Push to Hugging Face Hub
         push_to_huggingface_hub(model, tokenizer, config, run_id)
