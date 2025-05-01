@@ -22,15 +22,15 @@ lora:
 
 # Output configuration
 output:
-  output_dir: "./results"
+  output_dir: "./mlflow"
   logging_steps: 10
 
 # MLflow configuration
 mlflow:
-  tracking_uri: null # Set via environment or override
+  tracking_uri: "https://dagshub.com/ShenghaoisYummy/E-commerce-Chatbot.mlflow" # Set via environment or override
   experiment_name: "ecommerce-chatbot-finetuning"
 
 # Hugging Face Hub configuration
 hub:
-  push_to_hub: false
-  repository_id: null # Will be auto-generated if null
+  push_to_hub: true
+  repository_username: ShenghaoYummy # Will be auto-generated if null

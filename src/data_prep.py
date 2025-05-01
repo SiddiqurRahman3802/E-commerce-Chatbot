@@ -8,12 +8,14 @@ class EcommerceDataProcessor:
     Wraps data loading and preprocessing for the Bitext retail e-commerce dataset.
     """
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, sample_size: Optional[int] = None):
         """
         Args:
             file_path: Path to the CSV dataset.
+            sample_size: Number of rows to include in the processed dataset (None for all rows).
         """
         self.file_path: str = file_path
+        self.sample_size = sample_size
         self.df: Optional[pd.DataFrame] = None
 
     def load(self) -> pd.DataFrame:
@@ -21,6 +23,12 @@ class EcommerceDataProcessor:
         Load raw data from CSV into a DataFrame.
         """
         self.df = pd.read_csv(self.file_path)
+        
+        # Apply sampling if specified
+        if self.sample_size is not None and self.sample_size < len(self.df):
+            self.df = self.df.sample(n=self.sample_size, random_state=42)
+            print(f"Sampled {self.sample_size} rows from dataset")
+            
         return self.df
 
     @staticmethod

@@ -3,42 +3,44 @@
 
 model:
   base_model: "deepseek-ai/deepseek-coder-1.3b-instruct"
+  load_in_8bit: false # Set to false to disable 8-bit quantization (for testing)
 
 lora:
   r: 16 # Higher rank for more capacity
   alpha: 32
   dropout: 0.1 # Slightly higher dropout
 
-# Training configuration
+# Data preprocessing configuration
+data_preprocessing:
+  sample_size: 10
+  sample_description: "small_dataset_for_testing_pipeline"
+
+# Fine-tuning configuration
 training:
   epochs: 3
-  batch_size: 8
-  gradient_accumulation_steps: 4
+  batch_size: 1 # Reduced from 8 to save memory
+  gradient_accumulation_steps: 1 # Reduced from 4 to save memory
   learning_rate: 2.0e-4
   weight_decay: 0.01
   warmup_steps: 100
-  max_length: 512
-  fp16: true
-  evaluation_strategy: "epoch"
+  max_length: 256 # Reduced from 512 to save memory
+  fp16: false # Disabled for Mac MPS compatibility
+  eval_strategy: "epoch"
   save_strategy: "epoch"
   save_total_limit: 2
   load_best_model_at_end: true
 
-# Data configuration
+# Fine-tuning data configuration
 data:
-  dataset_tag: "data-20250429_101140"
-  dataset_path: "data/processed/processed_dataset_20250429_101140.csv"
+  dataset_tag: "tag-processed_dataset_10rows_small_dataset_for_testing_pipeline_20250501_134923.csv"
+  dataset_path: "data/processed/processed_dataset_10rows_small_dataset_for_testing_pipeline_20250501_124519.csv"
   test_size: 0.1
   seed: 42
   instruction_column: "instruction"
   response_column: "response"
 
-data:
-  dataset_tag: "data-sentiment-20250429_101140"
-  dataset_path: "data/processed/processed_dataset_sentiment_20250429_101140.csv"
-
 output:
-  output_dir: "./results/sentiment_model"
+  output_dir: "./mlflow/e-commerce-chatbot-finetuning"
 
 # Generation configuration
 generation:

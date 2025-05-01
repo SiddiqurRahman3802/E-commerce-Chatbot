@@ -5,6 +5,9 @@ import os
 import torch
 from datetime import datetime
 
+from mlflow.models.signature import ModelSignature
+from mlflow.types.schema import Schema, ColSpec
+
 # Add the project root to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -19,8 +22,13 @@ from src.fine_tuning import (
 from utils.mlflow_utils import setup_mlflow, log_model_info, start_run
 from utils.dvc_utils import setup_dvc_credentials, pull_dataset_by_tag
 from utils.yaml_utils import load_yaml_config, merge_configs, save_yaml_config, flatten_config
-from utils.constants import BASE_CONFIG_PATH, MODEL_CONFIG_PATH, DEFAULT_OUTPUT_DIR, MODELS_DIR, MLFLOW_URI
-from transformers import DataCollatorForSeq2Seq, Trainer
+from utils.constants import BASE_CONFIG_PATH, MODEL_CONFIG_PATH, DEFAULT_OUTPUT_DIR, MODELS_DIR
+from transformers import DataCollatorForLanguageModeling, Trainer
+from dotenv import load_dotenv
+
+print("mlflow")
+# Load environment variables
+load_dotenv()
 
 def main():
     # Load base configuration
@@ -36,17 +44,10 @@ def main():
     # Get all credentials and settings exclusively from environment variables
     aws_access_key = os.environ.get("AWS_ACCESS_KEY_ID")
     aws_secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
-    mlflow_tracking_uri = os.environ.get(MLFLOW_URI)
+    mlflow_tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
     experiment_name = os.environ.get("MLFLOW_EXPERIMENT_NAME", config.get('mlflow', {}).get('experiment_name'))
     hf_token = os.environ.get("HF_TOKEN")  # Hugging Face token if needed
     
-    # Update config with environment variables (without exposing sensitive data in config)
-    # if mlflow_tracking_uri and 'mlflow' in config:
-    #     config['mlflow']['tracking_uri'] = mlflow_tracking_uri
-    # if experiment_name and 'mlflow' in config:
-    #     config['mlflow']['experiment_name'] = experiment_name
-    
-    # Set up DVC credentials directly from environment variables (not stored in config)
     if aws_access_key and aws_secret_key:
         setup_dvc_credentials(aws_access_key, aws_secret_key)
         
@@ -108,10 +109,55 @@ def main():
         # Load base model and tokenizer
         model_name = config.get('model', {}).get('base_model', "deepseek-ai/deepseek-coder-1.3b-instruct")
         print(f"Loading base model: {model_name}")
+        
+        # Choose appropriate dtype based on device and config
+        use_8bit = config.get('model', {}).get('load_in_8bit', False)
+        use_fp16 = config.get('training', {}).get('fp16', False)
+        
+        # Check if we're on Mac with MPS
+        is_mps_available = hasattr(torch, 'mps') and torch.backends.mps.is_available()
+        try_cpu = os.environ.get("USE_CPU", "0") == "1"
+        
+        if try_cpu:
+            print("Using CPU as requested by environment variable USE_CPU=1")
+            device_map = "cpu"
+            torch_dtype = torch.float32
+            use_8bit = False
+            use_fp16 = False
+        elif is_mps_available:
+            print("MPS (Apple Silicon) device detected, adapting configuration...")
+            # Try to get system info
+            import subprocess
+            try:
+                total_ram = subprocess.check_output(['sysctl', '-n', 'hw.memsize']).strip()
+                total_ram_gb = int(total_ram) / (1024**3)
+                print(f"System has approximately {total_ram_gb:.2f} GB RAM")
+                
+                # If system has less than 32GB RAM, use CPU
+                if total_ram_gb < 32:
+                    print("System has less than 32GB RAM, using CPU instead of MPS for stability")
+                    device_map = "cpu"
+                else:
+                    device_map = "mps"
+            except:
+                # If we can't get system info, default to MPS
+                device_map = "mps"
+                
+            # Use float32 on MPS/CPU as it's more stable
+            torch_dtype = torch.float32
+            use_8bit = False  # Disable 8-bit on MPS
+            use_fp16 = False  # Disable fp16 on MPS
+        else:
+            device_map = "auto"
+            torch_dtype = torch.float16 if use_fp16 else torch.float32
+        
+        print(f"Using configuration: 8-bit={use_8bit}, fp16={use_fp16}, dtype={torch_dtype}, device_map={device_map}")
+        
         model, tokenizer = load_model_and_tokenizer(
             model_name,
-            load_in_8bit=config.get('model', {}).get('load_in_8bit', True),
-            torch_dtype=torch.float16 if config.get('training', {}).get('fp16', True) else torch.float32
+            load_in_8bit=use_8bit,
+            torch_dtype=torch_dtype,
+            device_map=device_map
         )
         
         # Setup LoRA
@@ -167,7 +213,7 @@ def main():
         if 'fp16' in training_config:
             training_args.fp16 = training_config['fp16']
         if 'evaluation_strategy' in training_config:
-            training_args.evaluation_strategy = training_config['evaluation_strategy']
+            training_args.eval_strategy = training_config['evaluation_strategy']
         if 'save_strategy' in training_config:
             training_args.save_strategy = training_config['save_strategy']
         if 'save_total_limit' in training_config:
@@ -180,10 +226,9 @@ def main():
             training_args.logging_steps = config['output']['logging_steps']
         
         # Data collator
-        data_collator = DataCollatorForSeq2Seq(
+        data_collator = DataCollatorForLanguageModeling(
             tokenizer=tokenizer,
-            padding=True,
-            return_tensors="pt"
+            mlm=False  # We want causal language modeling, not masked language modeling
         )
         
         # Define trainer
@@ -211,13 +256,23 @@ def main():
         mlflow.log_metrics({f"train_{k}": v for k, v in metrics.items()})
         mlflow.log_metrics({f"eval_{k}": v for k, v in eval_metrics.items()})
         
-        # # Save model
-        # final_model_path = os.path.join(MODELS_DIR, f"ecommerce_chatbot_{run_id}")
-        # model.save_pretrained(final_model_path)
-        # tokenizer.save_pretrained(final_model_path)
-        
         # Log model to MLflow
-        mlflow.pytorch.log_model(model, "model")
+
+        input_schema = Schema([ColSpec(type="string")])
+        # Define the output schema
+        output_schema = Schema([ColSpec(type="string")])
+
+        # Create a model signature
+
+        signature = ModelSignature(inputs=input_schema, outputs=output_schema)
+
+
+        mlflow.pytorch.log_model(
+            model, 
+            "model", 
+            input_example="### Instruction: What is your return policy?\n\n### Response:",
+            signature=signature  # Use the explicit signature
+        )
         
         # Optional: Push to Hugging Face Hub using environment variable for authentication
         if config.get('hub', {}).get('push_to_hub', False) and hf_token:
@@ -225,7 +280,7 @@ def main():
                 from huggingface_hub import login
                 login(token=hf_token)
                 
-                model_name = config.get('hub', {}).get('repository_id') or f"ShenghaoisYummy/ecommerce-chatbot-{run_id[:8]}"
+                model_name = config.get('hub', {}).get("repository_username") + f"/{run_id[:8]}" or f"ShenghaoisYummy/ecommerce-chatbot-{run_id[:8]}"
                 model.push_to_hub(model_name)
                 tokenizer.push_to_hub(model_name)
                 print(f"Model pushed to Hugging Face Hub: {model_name}")

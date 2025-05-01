@@ -8,7 +8,8 @@ from transformers import (
     AutoTokenizer, 
     TrainingArguments, 
     Trainer,
-    DataCollatorForSeq2Seq
+    DataCollatorForSeq2Seq,
+    BitsAndBytesConfig
 )
 
 def get_lora_config(r=8, lora_alpha=32, lora_dropout=0.05, target_modules=None):
@@ -27,15 +28,24 @@ def get_lora_config(r=8, lora_alpha=32, lora_dropout=0.05, target_modules=None):
         target_modules=target_modules
     )
 
-def load_model_and_tokenizer(model_name, load_in_8bit=True, torch_dtype=torch.float16):
+def load_model_and_tokenizer(model_name, load_in_8bit=True, torch_dtype=torch.float16, device_map="auto"):
     """
     Load pretrained model and tokenizer.
     """
+    if load_in_8bit:
+        quantization_config = BitsAndBytesConfig(
+            load_in_8bit=True,
+            llm_int8_threshold=6.0,
+            llm_int8_has_fp16_weight=False
+        )
+    else:
+        quantization_config = None
+        
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        load_in_8bit=load_in_8bit,
+        quantization_config=quantization_config,
         torch_dtype=torch_dtype,
-        device_map="auto"
+        device_map=device_map
     )
     
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -47,44 +57,75 @@ def prepare_model_for_lora(model, lora_config):
     """
     Prepare model for LoRA fine-tuning.
     """
-    model = prepare_model_for_kbit_training(model)
-    model = get_peft_model(model, lora_config)
-    return model
+    try:
+        # For 8-bit models, we need special preparation
+        if getattr(model, "is_loaded_in_8bit", False):
+            model = prepare_model_for_kbit_training(model)
+        
+        model = get_peft_model(model, lora_config)
+        return model
+    except Exception as e:
+        print(f"Error preparing model for LoRA: {e}")
+        # Fall back to standard preparation if kbit preparation fails
+        model = get_peft_model(model, lora_config)
+        return model
 
 def prepare_dataset(data_path, tokenizer, max_length=512, instruction_column="instruction", response_column="response"):
     """
     Load and prepare the dataset for instruction fine-tuning.
     """
-    # Load the preprocessed CSV
-    df = pd.read_csv(data_path)
-    print(f"Dataset loaded with {len(df)} samples")
-    
-    # Prepare dataset in instruction-following format
-    def format_chat(row):
-        return {
-            "text": f"### Instruction: {row[instruction_column]}\n\n### Response: {row[response_column]}"
-        }
-    
-    formatted_df = df.apply(format_chat, axis=1)
-    dataset = Dataset.from_pandas(formatted_df)
-    
-    # Tokenize the dataset
-    def tokenize_function(examples):
-        return tokenizer(
-            examples["text"],
-            padding="max_length",
-            truncation=True,
-            max_length=max_length,
-            return_tensors="pt"
+    try:
+        # Load the preprocessed CSV
+        df = pd.read_csv(data_path)
+        print(f"Dataset loaded with {len(df)} samples")
+        
+        # Verify columns exist
+        if instruction_column not in df.columns or response_column not in df.columns:
+            available_columns = ", ".join(df.columns.tolist())
+            raise ValueError(f"Required columns '{instruction_column}' or '{response_column}' not found in dataset. Available columns: {available_columns}")
+        
+        # Prepare dataset in instruction-following format
+        formatted_data = []
+        for _, row in df.iterrows():
+            # Convert row to dict if it's a Series
+            if isinstance(row, pd.Series):
+                instruction = row[instruction_column]
+                response = row[response_column]
+            else:
+                instruction = row.get(instruction_column)
+                response = row.get(response_column)
+                
+            formatted_data.append({
+                "text": f"### Instruction: {instruction}\n\n### Response: {response}"
+            })
+        
+        dataset = Dataset.from_list(formatted_data)
+        
+        # Tokenize the dataset with labels for causal language modeling
+        def tokenize_function(examples):
+            tokenized_inputs = tokenizer(
+                examples["text"],
+                padding="max_length",
+                truncation=True,
+                max_length=max_length,
+                return_tensors=None  # Don't convert to tensors here
+            )
+            
+            # Create labels - for causal language modeling, labels are the same as input_ids
+            tokenized_inputs["labels"] = tokenized_inputs["input_ids"].copy()
+            
+            return tokenized_inputs
+        
+        tokenized_dataset = dataset.map(
+            tokenize_function, 
+            batched=True,
+            remove_columns=dataset.column_names
         )
-    
-    tokenized_dataset = dataset.map(
-        tokenize_function, 
-        batched=True,
-        remove_columns=dataset.column_names
-    )
-    
-    return tokenized_dataset
+        
+        return tokenized_dataset
+    except Exception as e:
+        print(f"Error preparing dataset: {e}")
+        raise
 
 def get_training_args(output_dir, num_epochs=3, batch_size=8, gradient_accumulation_steps=4):
     """
@@ -100,11 +141,11 @@ def get_training_args(output_dir, num_epochs=3, batch_size=8, gradient_accumulat
         weight_decay=0.01,
         logging_dir=f"{output_dir}/logs",
         logging_steps=10,
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         save_strategy="epoch",
         save_total_limit=2,
         load_best_model_at_end=True,
-        fp16=True,
+        fp16=False,
     )
 
 def generate_response(instruction, model, tokenizer, max_length=150):
