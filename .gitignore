@@ -3,3 +3,10 @@ mlruns/
 src/__pycache__/
 notebooks/
 .env
+utils/__pycache__/
+scripts/__pycache__/
+.DS_Store
+.vscode/
+.env.local
+.env.development.local
+.env.test.local
