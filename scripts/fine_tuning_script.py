@@ -172,14 +172,28 @@ def main():
         trainer.log_metrics("eval", eval_metrics)
         
         # Log all metrics to MLflow
+        print("Logging metrics to MLflow...")
         mlflow.log_metrics({f"train_{k}": v for k, v in metrics.items()})
         mlflow.log_metrics({f"eval_{k}": v for k, v in eval_metrics.items()})
         
         # Log model to MLflow
-        mlflow_log_model(model)
+        print("Logging model to MLflow (this may take several minutes)...")
+        try:
+            mlflow_log_model(model)
+            print("Model logging to MLflow completed")
+        except Exception as e:
+            print(f"Error during model logging to MLflow: {e}")
         
         # Optional: Push to Hugging Face Hub
-        push_to_huggingface_hub(model, tokenizer, config, run_id)
+        print("Checking HuggingFace Hub config...")
+        if config.get('hub', {}).get('push_to_hub', False):
+            print("Attempting to push model to Hugging Face Hub...")
+            try:
+                push_to_huggingface_hub(model, tokenizer, config, run_id)
+            except Exception as e:
+                print(f"Error pushing to Hugging Face Hub: {e}")
+        else:
+            print("Skipping Hugging Face Hub push (not enabled in config)")
         
         print(f"Training completed successfully.")
         print(f"MLflow run ID: {run_id}")
