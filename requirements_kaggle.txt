@@ -2,7 +2,6 @@ symspellpy
 bitsandbytes
 mlflow
 dvc[s3]
-dagshub
 awscli
 python-dotenv
 streamlit
