@@ -1,4 +1,4 @@
-# src/finetuning_utils.py
+# src/fine_tuning.py
 import torch
 import pandas as pd
 from datasets import Dataset
@@ -9,6 +9,7 @@ from transformers import (
     TrainingArguments, 
     Trainer,
     DataCollatorForSeq2Seq,
+    DataCollatorForLanguageModeling,
     BitsAndBytesConfig
 )
 
@@ -166,3 +167,40 @@ def generate_response(instruction, model, tokenizer, max_length=150):
     
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return response.split("### Response:")[1].strip()
+
+def get_data_collator(tokenizer):
+    """
+    Create a data collator for language modeling.
+    """
+    return DataCollatorForLanguageModeling(
+        tokenizer=tokenizer,
+        mlm=False  # We want causal language modeling, not masked language modeling
+    )
+
+def update_training_args_from_config(training_args, config):
+    """
+    Update training arguments based on configuration.
+    """
+    training_config = config.get('training', {})
+    if 'learning_rate' in training_config:
+        training_args.learning_rate = training_config['learning_rate']
+    if 'weight_decay' in training_config:
+        training_args.weight_decay = training_config['weight_decay']
+    if 'warmup_steps' in training_config:
+        training_args.warmup_steps = training_config['warmup_steps']
+    if 'fp16' in training_config:
+        training_args.fp16 = training_config['fp16']
+    if 'evaluation_strategy' in training_config:
+        training_args.eval_strategy = training_config['evaluation_strategy']
+    if 'save_strategy' in training_config:
+        training_args.save_strategy = training_config['save_strategy']
+    if 'save_total_limit' in training_config:
+        training_args.save_total_limit = training_config['save_total_limit']
+    if 'load_best_model_at_end' in training_config:
+        training_args.load_best_model_at_end = training_config['load_best_model_at_end']
+        
+    # Set logging steps from output config if available
+    if 'output' in config and 'logging_steps' in config['output']:
+        training_args.logging_steps = config['output']['logging_steps']
+    
+    return training_args

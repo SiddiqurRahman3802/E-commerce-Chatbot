@@ -2,6 +2,7 @@
 import yaml
 import os
 from typing import Dict, Any, Optional
+from utils.constants import BASE_CONFIG_PATH, MODEL_CONFIG_PATH
 
 def load_yaml_config(config_path: str) -> Dict[str, Any]:
     """
@@ -82,3 +83,19 @@ def flatten_config(config: Dict[str, Any], parent_key: str = '') -> Dict[str, An
             flattened[new_key] = v
     
     return flattened
+
+def load_config():
+    """
+    Load and merge configuration files.
+    """
+    # Load base configuration
+    config = load_yaml_config(BASE_CONFIG_PATH)
+    print(f"Loaded base configuration from {BASE_CONFIG_PATH}")
+    
+    # Check for model-specific configuration override
+    if os.path.exists(MODEL_CONFIG_PATH):
+        model_config = load_yaml_config(MODEL_CONFIG_PATH)
+        config = merge_configs(config, model_config)
+        print(f"Merged model configuration from {MODEL_CONFIG_PATH}")
+    
+    return config

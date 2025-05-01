@@ -1,6 +1,7 @@
 # src/dvc_utils.py
 import subprocess
 import os
+import torch
 
 def setup_dvc_credentials(aws_access_key=None, aws_secret_key=None):
     """
@@ -49,3 +50,29 @@ def pull_dataset_by_tag(tag, dataset_path):
         except:
             pass
         return False
+
+def setup_environment(config):
+    """
+    Set up environment, credentials, and datasets.
+    """
+    # Get all credentials and settings exclusively from environment variables
+    aws_access_key = os.environ.get("AWS_ACCESS_KEY_ID")
+    aws_secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
+    
+    if aws_access_key and aws_secret_key:
+        setup_dvc_credentials(aws_access_key, aws_secret_key)
+        
+        # Pull dataset using DVC
+        if 'data' in config and 'dataset_tag' in config['data'] and 'dataset_path' in config['data']:
+            dataset_success = pull_dataset_by_tag(config['data']['dataset_tag'], config['data']['dataset_path'])
+            if not dataset_success:
+                print("Failed to pull dataset. Exiting.")
+                return False
+    else:
+        print("AWS credentials not found in environment variables. Skipping DVC pull.")
+    
+    # Set randomness controls for reproducibility
+    seed = config.get('data', {}).get('seed', 42)
+    torch.manual_seed(seed)
+    
+    return True
