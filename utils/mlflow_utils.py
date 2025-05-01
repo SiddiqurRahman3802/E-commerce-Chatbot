@@ -43,6 +43,12 @@ def mlflow_setup_tracking(config):
     Set up MLflow tracking and experiment.
     """
     mlflow_tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
+    
+    # If not set in environment, use config or default value
+    if not mlflow_tracking_uri:
+        mlflow_tracking_uri = config.get('mlflow', {}).get('tracking_uri', "file:///./mlruns")
+        os.environ["MLFLOW_TRACKING_URI"] = mlflow_tracking_uri
+        
     experiment_name = os.environ.get("MLFLOW_EXPERIMENT_NAME", config.get('mlflow', {}).get('experiment_name'))
     
     # Set up MLflow tracking
