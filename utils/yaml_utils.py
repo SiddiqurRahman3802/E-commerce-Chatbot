@@ -2,7 +2,7 @@
 import yaml
 import os
 from typing import Dict, Any, Optional
-from utils.constants import BASE_CONFIG_PATH, MODEL_CONFIG_PATH
+from utils.constants import BASE_CONFIG_PATH, MODEL_CONFIG_PATH, EVALUATION_CONFIG_PATH
 
 def load_yaml_config(config_path: str) -> Dict[str, Any]:
     """
@@ -97,5 +97,10 @@ def load_config():
         model_config = load_yaml_config(MODEL_CONFIG_PATH)
         config = merge_configs(config, model_config)
         print(f"Merged model configuration from {MODEL_CONFIG_PATH}")
+
+    if os.path.exists(EVALUATION_CONFIG_PATH):
+        eval_config = load_yaml_config(EVALUATION_CONFIG_PATH)
+        config = merge_configs(config, eval_config)
+        print(f"Merged model configuration from {EVALUATION_CONFIG_PATH}")
     
     return config

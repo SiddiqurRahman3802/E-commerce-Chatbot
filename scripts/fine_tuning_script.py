@@ -176,6 +176,9 @@ def main():
         mlflow.log_metrics({f"train_{k}": v for k, v in metrics.items()})
         mlflow.log_metrics({f"eval_{k}": v for k, v in eval_metrics.items()})
         
+
+        # Log model locally
+
         # Log model to MLflow
         print("Logging model to MLflow (this may take several minutes)...")
         try:
@@ -183,8 +186,8 @@ def main():
             print("Model logging to MLflow completed")
         except Exception as e:
             print(f"Error during model logging to MLflow: {e}")
-        
-        # Optional: Push to Hugging Face Hub
+
+        # Push to Hugging Face Hub
         print("Checking HuggingFace Hub config...")
         if config.get('hub', {}).get('push_to_hub', False):
             print("Attempting to push model to Hugging Face Hub...")

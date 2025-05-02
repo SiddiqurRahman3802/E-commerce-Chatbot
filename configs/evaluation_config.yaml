@@ -1,0 +1,15 @@
+# Add to configs/base_config.yaml or create configs/eval_config.yaml
+
+# Evaluation configuration
+evaluation:
+  model_path: "ShenghaoYummy/145a05ed" # or use HF Hub path like "ShenghaoisYummy/ecommerce-chatbot-xxxxx"
+  eval_dataset_path: "data/evaluation/evaluation_10rows.csv" # Optional, will use training dataset's test split if not provided
+  sample_size: 100 # How many samples to evaluate (set to null to use entire test set)
+  metrics:
+    - "bleu"
+    - "rouge"
+
+# MLflow configuration for evaluation
+mlflow:
+  tracking_uri: "https://dagshub.com/ShenghaoisYummy/E-commerce-Chatbot.mlflow"
+  experiment_name: "ecommerce-chatbot-evaluation"
