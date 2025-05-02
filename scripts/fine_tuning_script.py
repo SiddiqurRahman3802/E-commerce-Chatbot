@@ -4,6 +4,7 @@ import sys
 import os
 import torch
 from datetime import datetime
+import json
 
 # Add the project root to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,7 +26,8 @@ from utils.mlflow_utils import (
     mlflow_log_model_info, 
     mlflow_start_run,
     mlflow_setup_tracking,
-    mlflow_log_model
+    mlflow_log_model,
+    log_transformers_model
 )
 from utils.dvc_utils import setup_environment_data
 from utils.yaml_utils import (
@@ -176,16 +178,55 @@ def main():
         mlflow.log_metrics({f"train_{k}": v for k, v in metrics.items()})
         mlflow.log_metrics({f"eval_{k}": v for k, v in eval_metrics.items()})
         
+        # Create results directory if it doesn't exist
+        os.makedirs("results", exist_ok=True)
 
-        # Log model locally
-
-        # Log model to MLflow
-        print("Logging model to MLflow (this may take several minutes)...")
+        # Log model to MLflow using transformers-specific logging
+        print("Logging model to MLflow using transformers-specific logging...")
         try:
-            mlflow_log_model(model)
-            print("Model logging to MLflow completed")
+            # Log the model with transformers-specific logging
+            model_run_id = log_transformers_model(
+                model=model,
+                tokenizer=tokenizer,
+                task="text-generation",
+                output_dir=os.path.join(MODELS_DIR, f"transformer_model_{run_timestamp}")
+            )
+            
+            # Save model location information for DVC pipeline
+            model_info = {
+                "mlflow_run_id": model_run_id or run_id,
+                "tracking_uri": mlflow.get_tracking_uri(),
+                "timestamp": run_timestamp,
+                "model_name": model_name,
+                "fine_tuned": True
+            }
+            
+            with open("results/model_location.json", "w") as f:
+                json.dump(model_info, f)
+                
+            print("Model location information saved to results/model_location.json")
+            
         except Exception as e:
-            print(f"Error during model logging to MLflow: {e}")
+            print(f"Error during transformers model logging to MLflow: {e}")
+            # Fallback to regular PyTorch logging
+            try:
+                mlflow_log_model(model)
+                print("Model logging to MLflow completed using fallback PyTorch method")
+                
+                # Still save the model location info
+                model_info = {
+                    "mlflow_run_id": run_id,
+                    "tracking_uri": mlflow.get_tracking_uri(),
+                    "timestamp": run_timestamp,
+                    "model_name": model_name,
+                    "fine_tuned": True,
+                    "fallback_method": "pytorch"
+                }
+                
+                with open("results/model_location.json", "w") as f:
+                    json.dump(model_info, f)
+            except Exception as e2:
+                print(f"Error during fallback model logging to MLflow: {e2}")
 
         # Push to Hugging Face Hub
         print("Checking HuggingFace Hub config...")
