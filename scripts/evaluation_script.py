@@ -11,6 +11,7 @@ from datasets import load_dataset
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu
 from rouge_score import rouge_scorer
 import nltk
+import json
 
 # Add the project root to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -285,6 +286,14 @@ def main():
         # Log metrics to MLflow
         print("Logging metrics to MLflow...")
         mlflow.log_metrics(metrics)
+        
+        # Save metrics to JSON for DVC
+        metrics_dir = os.path.join(RESULTS_DIR)
+        os.makedirs(metrics_dir, exist_ok=True)
+        metrics_path = os.path.join(metrics_dir, "metrics.json")
+        with open(metrics_path, 'w') as f:
+            json.dump(metrics, f, indent=2)
+        print(f"Metrics saved to {metrics_path} for DVC tracking")
         
         # Save results dataframe
         results_path = os.path.join(output_dir, "generation_results.csv")

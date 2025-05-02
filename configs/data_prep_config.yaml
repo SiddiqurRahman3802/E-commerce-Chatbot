@@ -1,0 +1,85 @@
+# Data preprocessing configuration
+
+# Input/output paths
+data:
+  input_path: "data/raw/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv"
+  output_dir: "data/processed"
+
+# Sampling options
+sampling:
+  sample_size: 10 # Number of rows to include (set to null for all rows)
+  random_state: 42 # Random seed for reproducibility
+  sample_description: "small_dataset_for_testing_pipeline" # Description for the filename
+
+# Text cleaning options
+text_cleaning:
+  lowercase: true
+  remove_html: true
+  remove_special_chars: true
+  collapse_whitespace: true
+
+# Feature engineering options
+feature_engineering:
+  extract_language_features: true
+  create_category_encodings: true
+  add_question_features: true
+  add_ecommerce_keyword_features: true
+  add_sentiment_indicators: true
+
+# E-commerce specific keywords
+ecommerce_keywords:
+  price:
+    - "price"
+    - "cost"
+    - "expensive"
+    - "cheap"
+  shipping:
+    - "shipping"
+    - "delivery"
+    - "ship"
+    - "track"
+  payment:
+    - "pay"
+    - "payment"
+    - "card"
+    - "refund"
+  product:
+    - "product"
+    - "item"
+    - "order"
+    - "cart"
+  return:
+    - "return"
+    - "exchange"
+    - "refund"
+    - "cancel"
+
+# Sentiment indicators
+sentiment_words:
+  positive:
+    - "please"
+    - "thank"
+    - "good"
+    - "great"
+    - "help"
+  negative:
+    - "bad"
+    - "wrong"
+    - "issue"
+    - "problem"
+    - "error"
+    - "complaint"
+  urgency:
+    - "urgent"
+    - "asap"
+    - "emergency"
+    - "immediately"
+    - "quick"
+
+# Version control settings
+version_control:
+  add_to_dvc: true
+  create_git_tag: true
+  git_branch: "Austin" # Branch to push changes to
+  commit_msg_template: "Add dataset ({timestamp})"
+  tag_template: "tag-{filename}"

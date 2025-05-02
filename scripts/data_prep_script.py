@@ -12,8 +12,8 @@ load_dotenv()
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.data_prep import EcommerceDataProcessor
 
-# Load the sample size and description from configuration
-config_path = "configs/model_config.yaml"
+# Load configuration
+config_path = "configs/data_prep_config.yaml"
 sample_size = None
 sample_description = None
 
@@ -21,18 +21,31 @@ try:
     with open(config_path, 'r') as config_file:
         config = yaml.safe_load(config_file)
         # Get sample size from config (default to None if not specified)
-        sample_size = config.get('data_preprocessing', {}).get('sample_size', None)
+        sample_size = config.get('sampling', {}).get('sample_size', None)
         # Get sample description from config
-        sample_description = config.get('data_preprocessing', {}).get('sample_description', "")
+        sample_description = config.get('sampling', {}).get('sample_description', "")
+        # Get input and output paths
+        input_path = config.get('data', {}).get('input_path', "data/raw/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv")
+        output_dir = config.get('data', {}).get('output_dir', "data/processed")
+        # Get version control settings
+        git_branch = config.get('version_control', {}).get('git_branch', "Austin")
+        add_to_dvc = config.get('version_control', {}).get('add_to_dvc', True)
+        create_git_tag = config.get('version_control', {}).get('create_git_tag', True)
     
-    print(f"Using sample size from config: {sample_size}")
+    print(f"Using configuration from: {config_path}")
+    print(f"Sample size: {sample_size}")
     if sample_description:
         print(f"Sample description: {sample_description}")
 except Exception as e:
-    print(f"Could not load sample configuration from config: {e}")
-    print("Will use full dataset")
+    print(f"Could not load configuration from {config_path}: {e}")
+    print("Using default values")
+    input_path = "data/raw/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv"
+    output_dir = "data/processed"
+    git_branch = "Austin"
+    add_to_dvc = True
+    create_git_tag = True
 
-os.makedirs("data/processed", exist_ok=True)
+os.makedirs(output_dir, exist_ok=True)
 
 print("Pre-processing data...")
 # Get current timestamp for unique filename
@@ -50,10 +63,10 @@ if filename_components:
     prefix += "_" + "_".join(filename_components)
 
 output_filename = f"{prefix}_{timestamp}.csv"
-output_path = f"data/processed/{output_filename}"
+output_path = f"{output_dir}/{output_filename}"
 
 # Initialize processor with raw data path
-processor = EcommerceDataProcessor("data/raw/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv")
+processor = EcommerceDataProcessor(input_path)
 
 # Run the full processing pipeline
 processed_df = processor.run()
@@ -67,28 +80,36 @@ if sample_size is not None and sample_size < len(processed_df):
 processed_df.to_csv(output_path, index=False)
 print(f"Saved processed dataset to {output_path}")
 
+if add_to_dvc:
+    # Set Git identity before committing
+    subprocess.run(["git", "config", "--global", "user.email", "hsupisces@Hotmail.com"], check=False)
+    subprocess.run(["git", "config", "--global", "user.name", "ShenghaoisYummy"], check=False)
+    subprocess.run(['git', 'config', '--global', 'credential.helper', 'store'], check=True)
+    
+    try:
+        with open(os.path.expanduser('~/.git-credentials'), 'w') as f:
+            f.write(f"https://{os.environ['GIT_USERNAME']}:{os.environ['GIT_PASSWORD']}@github.com\n")
 
-# Set Git identity before committing
-subprocess.run(["git", "config", "--global", "user.email", "hsupisces@Hotmail.com"], check=False)
-subprocess.run(["git", "config", "--global", "user.name", "ShenghaoisYummy"], check=False)
-subprocess.run(['git', 'config', '--global', 'credential.helper', 'store'], check=True)
-with open(os.path.expanduser('~/.git-credentials'), 'w') as f:
-    f.write(f"https://{os.environ['GIT_USERNAME']}:{os.environ['GIT_PASSWORD']}@github.com\n")
+        #Track with DVC
+        subprocess.run(["dvc", "add", output_path], check=True)
+        subprocess.run(["git", "add", f"{output_path}.dvc"], check=True)
+        subprocess.run(["git", "commit", "-m", f"Add dataset ({timestamp})"], check=True)
 
+        # Create a tag for this dataset version
+        if create_git_tag:
+            tag_name = f"tag-{output_filename}"
+            subprocess.run(["git", "tag", "-a", tag_name, "-m", f"Dataset processed at {timestamp}"], check=True)
 
-#Track with DVC
-subprocess.run(["dvc", "add", output_path], check=True)
-subprocess.run(["git", "add", f"{output_path}.dvc"], check=True)
-subprocess.run(["git", "commit", "-m", f"Add dataset ({timestamp})"], check=True)
+        # Push everything
+        subprocess.run(["dvc", "push"], check=True)
+        subprocess.run(["git", "push", "origin", git_branch], check=True)
+        if create_git_tag:
+            subprocess.run(["git", "push", "--tags"], check=True)
+            print(f"Dataset tracked with DVC and tagged as: {tag_name}")
+        else:
+            print(f"Dataset tracked with DVC")
+    except Exception as e:
+        print(f"Error in DVC/Git operations: {e}")
+        print("Processed data was saved but not tracked in DVC/Git")
 
-# Create a tag for this dataset version
-tag_name = f"tag-{output_filename}"
-subprocess.run(["git", "tag", "-a", tag_name, "-m", f"Dataset processed at {timestamp}"], check=True)
-
-# Push everything
-subprocess.run(["dvc", "push"], check=True)
-subprocess.run(["git", "push", "origin", "Austin"], check=True)
-subprocess.run(["git", "push", "--tags"], check=True)
-
-print(f"Dataset tracked with DVC and tagged as: {tag_name}")
-print(f"Dataset processed as processed_dataset_{sample_size}rows_{timestamp}.csv")
+print(f"Dataset processing completed: {output_filename}")
