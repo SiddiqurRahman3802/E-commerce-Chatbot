@@ -2,8 +2,9 @@
 
 # Evaluation configuration
 evaluation:
-  model_path: "ShenghaoYummy/145a05ed" # or use HF Hub path like "ShenghaoisYummy/ecommerce-chatbot-xxxxx"
-  eval_dataset_path: "data/evaluation/evaluation_10rows.csv" # Optional, will use training dataset's test split if not provided
+  use_dagshub: true # Set to true to load model from DagShub/MLflow
+  model_path: "ShenghaoYummy/145a05ed" # Fallback model path if DagShub loading fails
+  eval_dataset_path: "data/evaluation/evaluation_10rows.csv" # Evaluation dataset
   sample_size: 100 # How many samples to evaluate (set to null to use entire test set)
   metrics:
     - "bleu"

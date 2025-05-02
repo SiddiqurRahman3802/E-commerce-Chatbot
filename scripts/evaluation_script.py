@@ -25,7 +25,8 @@ from src.fine_tuning import (
 from utils.mlflow_utils import (
     mlflow_log_model_info,
     mlflow_start_run,
-    mlflow_setup_tracking
+    mlflow_setup_tracking,
+    load_model_from_dagshub
 )
 from utils.yaml_utils import (
     load_config
@@ -238,77 +239,90 @@ def main():
         # Configure device settings
         device_config = configure_device_settings(config)
         
-        # Get model path or name
-        model_name = config.get('evaluation', {}).get('model_path', None)
-        if not model_name:
-            print("Error: Model path not specified in config. Add 'model_path' under 'evaluation' section.")
-            return
+        # Check if we should use DagShub for model loading
+        use_dagshub = config.get('evaluation', {}).get('use_dagshub', True)
+        model_location_file = "results/model_location.json"
         
-        # Load model and tokenizer
-        print(f"Loading model: {model_name}")
-        model, tokenizer = load_model_and_tokenizer(
-            model_name,
-            load_in_8bit=device_config["use_8bit"],
-            torch_dtype=device_config["torch_dtype"],
-            device_map=device_config["device_map"]
-        )
+        if use_dagshub and os.path.exists(model_location_file):
+            try:
+                print("Loading model from DagShub/MLflow...")
+                # Load model from DagShub/MLflow
+                model_components = load_model_from_dagshub(model_info_path=model_location_file)
+                model = model_components["model"]
+                tokenizer = model_components["tokenizer"]
+                
+                # Log the model source
+                with open(model_location_file, "r") as f:
+                    model_info = json.load(f)
+                mlflow.log_param("model_source", "dagshub")
+                mlflow.log_param("model_run_id", model_info.get("mlflow_run_id", "unknown"))
+                
+                print("Model loaded successfully from DagShub/MLflow")
+            except Exception as e:
+                print(f"Error loading model from DagShub/MLflow: {e}")
+                print("Falling back to specified model path...")
+                use_dagshub = False
         
-        # Log model info
-        mlflow_log_model_info(model)
-        
-        # Load test dataset
-        eval_dataset_path = config.get('evaluation', {}).get('eval_dataset_path')
-        if not eval_dataset_path:
-            # If not specified, use the same dataset as training but only test split
-            eval_dataset_path = config.get('data', {}).get('dataset_path')
-            if not eval_dataset_path:
-                print("Error: No dataset path specified in config.")
+        if not use_dagshub:
+            # Get model path or name from config
+            model_name = config.get('evaluation', {}).get('model_path')
+            if not model_name:
+                print("Error: Model path not specified in config. Add 'model_path' under 'evaluation' section.")
                 return
             
-            # Load and split dataset
-            print(f"Loading dataset: {eval_dataset_path}")
-            dataset = load_dataset('csv', data_files=eval_dataset_path)['train']
-            test_dataset = dataset.train_test_split(
-                test_size=config.get('data', {}).get('test_size', 0.1), 
-                seed=config.get('data', {}).get('seed', 42)
-            )["test"]
-        else:
-            # Load the specified test dataset
-            print(f"Loading test dataset: {eval_dataset_path}")
+            # Load model and tokenizer
+            print(f"Loading model from specified path: {model_name}")
+            model, tokenizer = load_model_and_tokenizer(
+                model_name,
+                load_in_8bit=device_config["use_8bit"],
+                torch_dtype=device_config["torch_dtype"],
+                device_map=device_config["device_map"]
+            )
+            mlflow.log_param("model_source", "direct_path")
+            mlflow.log_param("model_path", model_name)
+        
+        # Get evaluation dataset
+        eval_dataset_path = config.get('evaluation', {}).get('eval_dataset_path')
+        if not eval_dataset_path:
+            print("Evaluation dataset path not specified, exiting.")
+            return
+            
+        print(f"Loading evaluation dataset from {eval_dataset_path}")
+        try:
             test_dataset = load_dataset('csv', data_files=eval_dataset_path)['train']
-        
-        print(f"Test dataset size: {len(test_dataset)}")
-        
-        # Evaluate model
-        print("Evaluating model...")
+        except Exception as e:
+            print(f"Error loading evaluation dataset: {e}")
+            return
+            
+        # Evaluate the model
+        print("Starting model evaluation...")
         metrics, results_df = evaluate_model(model, tokenizer, test_dataset, config)
         
-        # Log metrics to MLflow
-        print("Logging metrics to MLflow...")
-        mlflow.log_metrics(metrics)
-        
-        # Save metrics to JSON for DVC
-        metrics_dir = os.path.join(RESULTS_DIR)
-        os.makedirs(metrics_dir, exist_ok=True)
-        metrics_path = os.path.join(metrics_dir, "metrics.json")
-        with open(metrics_path, 'w') as f:
+        # Save metrics to file
+        metrics_file = os.path.join(RESULTS_DIR, "metrics.json")
+        with open(metrics_file, 'w') as f:
             json.dump(metrics, f, indent=2)
-        print(f"Metrics saved to {metrics_path} for DVC tracking")
+            
+        # Save detailed results
+        results_file = os.path.join(output_dir, "evaluation_results.csv")
+        results_df.to_csv(results_file, index=False)
         
-        # Save results dataframe
-        results_path = os.path.join(output_dir, "generation_results.csv")
-        results_df.to_csv(results_path, index=False)
-        mlflow.log_artifact(results_path)
+        # Log metrics to MLflow
+        for key, value in metrics.items():
+            mlflow.log_metric(key, value)
+            
+        # Log artifacts
+        mlflow.log_artifact(metrics_file)
+        mlflow.log_artifact(results_file)
         
-        # Print metrics
-        print("\nEvaluation Metrics:")
-        for metric_name, metric_value in metrics.items():
-            print(f"  {metric_name}: {metric_value:.4f}")
+        print(f"Evaluation completed successfully.")
+        print(f"Metrics saved to {metrics_file}")
+        print(f"Detailed results saved to {results_file}")
         
-        print(f"\nEvaluation completed successfully.")
-        print(f"Results saved to: {results_path}")
-        print(f"MLflow run ID: {run_id}")
-        print(f"MLflow tracking URI: {tracking_uri}")
+        # Print summary metrics
+        print("\nEvaluation Summary:")
+        for key, value in metrics.items():
+            print(f"{key}: {value:.4f}")
 
 if __name__ == "__main__":
     main()

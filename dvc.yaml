@@ -29,6 +29,8 @@ stages:
     outs:
       - mlflow/e-commerce-chatbot-finetuning:
           persist: true
+      - results/model_location.json:
+          persist: true
 
   evaluation:
     cmd: python scripts/evaluation_script.py
@@ -38,6 +40,7 @@ stages:
       - configs/base_config.yaml
       - configs/evaluation_config.yaml
       - data/evaluation/evaluation_10rows.csv
+      - results/model_location.json
     params:
       - evaluation
       - mlflow
