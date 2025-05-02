@@ -1,0 +1,46 @@
+stages:
+  data_preprocessing:
+    cmd: python scripts/data_prep_script.py
+    deps:
+      - scripts/data_prep_script.py
+      - src/data_prep.py
+      - data/raw/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv
+      - configs/data_prep_config.yaml
+    params:
+      - sampling.sample_size
+      - sampling.sample_description
+    outs:
+      - data/processed/processed_dataset_10rows_small_dataset_for_testing_pipeline_20250502_132246.csv:
+          persist: true
+
+  fine_tuning:
+    cmd: python scripts/fine_tuning_script.py
+    deps:
+      - scripts/fine_tuning_script.py
+      - src/fine_tuning.py
+      - configs/base_config.yaml
+      - configs/model_config.yaml
+      - data/processed/processed_dataset_10rows_small_dataset_for_testing_pipeline_20250502_132246.csv
+    params:
+      - model
+      - lora
+      - training
+      - data
+    outs:
+      - mlflow/e-commerce-chatbot-finetuning:
+          persist: true
+
+  evaluation:
+    cmd: python scripts/evaluation_script.py
+    deps:
+      - scripts/evaluation_script.py
+      - src/fine_tuning.py
+      - configs/base_config.yaml
+      - configs/evaluation_config.yaml
+      - data/evaluation/evaluation_10rows.csv
+    params:
+      - evaluation
+      - mlflow
+    metrics:
+      - results/metrics.json:
+          cache: false

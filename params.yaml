@@ -1,0 +1,6 @@
+# Parameters for DVC pipeline
+
+# Data preprocessing parameters
+sampling:
+  sample_size: 10
+  sample_description: "small_dataset_for_testing_pipeline"

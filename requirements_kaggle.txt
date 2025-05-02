@@ -1,0 +1,6 @@
+symspellpy
+bitsandbytes
+mlflow
+dvc[s3]
+python-dotenv
+streamlit
