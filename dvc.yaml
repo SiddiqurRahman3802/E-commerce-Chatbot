@@ -10,7 +10,7 @@ stages:
       - sampling.sample_size
       - sampling.sample_description
     outs:
-      - data/processed:
+      - data/processed/processed_dataset_10rows_small_dataset_for_testing_pipeline_20250502_132246.csv:
           persist: true
 
   fine_tuning:
@@ -20,7 +20,7 @@ stages:
       - src/fine_tuning.py
       - configs/base_config.yaml
       - configs/model_config.yaml
-      - data/processed/processed_dataset_10rows_small_dataset_for_testing_pipeline_20250501_124519.csv
+      - data/processed/processed_dataset_10rows_small_dataset_for_testing_pipeline_20250502_132246.csv
     params:
       - model
       - lora

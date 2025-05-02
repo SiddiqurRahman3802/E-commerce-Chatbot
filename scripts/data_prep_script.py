@@ -90,26 +90,30 @@ if add_to_dvc:
         with open(os.path.expanduser('~/.git-credentials'), 'w') as f:
             f.write(f"https://{os.environ['GIT_USERNAME']}:{os.environ['GIT_PASSWORD']}@github.com\n")
 
-        #Track with DVC
-        subprocess.run(["dvc", "add", output_path], check=True)
-        subprocess.run(["git", "add", f"{output_path}.dvc"], check=True)
-        subprocess.run(["git", "commit", "-m", f"Add dataset ({timestamp})"], check=True)
+        # Skip DVC add since it's handled by the pipeline
+        # Just create a file with metadata for reference
+        with open(f"{output_path}.info", 'w') as f:
+            f.write(f"Dataset processed at {timestamp}\n")
+            f.write(f"Sample size: {sample_size}\n")
+            f.write(f"Sample description: {sample_description}\n")
+        
+        subprocess.run(["git", "add", f"{output_path}.info"], check=True)
+        subprocess.run(["git", "commit", "-m", f"Add dataset info ({timestamp})"], check=True)
 
         # Create a tag for this dataset version
         if create_git_tag:
             tag_name = f"tag-{output_filename}"
             subprocess.run(["git", "tag", "-a", tag_name, "-m", f"Dataset processed at {timestamp}"], check=True)
 
-        # Push everything
-        subprocess.run(["dvc", "push"], check=True)
+        # Push changes
         subprocess.run(["git", "push", "origin", git_branch], check=True)
         if create_git_tag:
             subprocess.run(["git", "push", "--tags"], check=True)
-            print(f"Dataset tracked with DVC and tagged as: {tag_name}")
+            print(f"Dataset metadata tagged as: {tag_name}")
         else:
-            print(f"Dataset tracked with DVC")
+            print(f"Dataset metadata committed")
     except Exception as e:
-        print(f"Error in DVC/Git operations: {e}")
-        print("Processed data was saved but not tracked in DVC/Git")
+        print(f"Error in Git operations: {e}")
+        print("Processed data was saved but metadata not tracked in Git")
 
 print(f"Dataset processing completed: {output_filename}")
