@@ -75,11 +75,10 @@ sentiment_words:
     - "emergency"
     - "immediately"
     - "quick"
-
 # Version control settings
-version_control:
-  add_to_dvc: true
-  create_git_tag: true
-  git_branch: "Austin" # Branch to push changes to
-  commit_msg_template: "Add dataset ({timestamp})"
-  tag_template: "tag-{filename}"
+# version_control:
+#   add_to_dvc: true
+#   create_git_tag: true
+#   git_branch: "Austin" # Branch to push changes to
+#   commit_msg_template: "Add dataset ({timestamp})"
+#   tag_template: "tag-{filename}"
