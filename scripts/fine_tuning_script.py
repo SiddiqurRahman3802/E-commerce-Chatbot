@@ -117,7 +117,17 @@ def main():
         mlflow_log_model_info(model)
         
         # Prepare dataset
-        dataset_path = config.get('data', {}).get('dataset_path')
+
+        # Load dataset reference
+        with open("data/processed/latest_dataset_ref.json", 'r') as f:
+            dataset_info = json.load(f)
+
+        # Log dataset lineage in the model training run
+        mlflow.log_param("dataset_run_id", dataset_info["mlflow_run_id"])
+
+        # Use dataset path from the reference
+        dataset_path = dataset_info["dataset_path"]
+        
         if not dataset_path:
             print("Dataset path not specified in config. Exiting.")
             return

@@ -10,7 +10,7 @@ stages:
       - sampling.sample_size
       - sampling.sample_description
     outs:
-      - data/processed/processed_dataset_10rows_small_dataset_for_testing_pipeline_20250502_132246.csv:
+      - data/processed/latest_dataset_ref.json:
           persist: true
 
   fine_tuning:
