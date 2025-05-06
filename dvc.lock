@@ -5,27 +5,26 @@ stages:
     deps:
     - path: configs/data_prep_config.yaml
       hash: md5
-      md5: 443d5c305968d441e7fc9c117491581d
-      size: 1713
+      md5: e63838f6cdb1297b2d7638bed8ad6095
+      size: 1724
     - path: data/raw/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv
       hash: md5
       md5: 6dd684fa00ea6f065b0b7c9375e01675
       size: 42624013
     - path: scripts/data_prep_script.py
       hash: md5
-      md5: d0e9f99e6f8ee708825a02b56f0ea643
-      size: 4783
+      md5: a399d24befd07ce475ff7ad76a1d048d
+      size: 4792
     - path: src/data_prep.py
       hash: md5
-      md5: 8f7d87059fbadbb22f023083552e3d53
-      size: 5694
+      md5: fcbb3731279b1b77286ada28737710f4
+      size: 8729
     params:
       params.yaml:
         sampling.sample_description: small_dataset_for_testing_pipeline
         sampling.sample_size: 10
     outs:
-    - path: 
-        data/processed/processed_dataset_10rows_small_dataset_for_testing_pipeline_20250502_215110.csv
+    - path: data/processed/latest_dataset_ref.json
       hash: md5
-      md5: 610e776b5e9e7334aee0056ea49ba38c
-      size: 17786
+      md5: d6712bfecbc86fec0dada02f437c534b
+      size: 225
