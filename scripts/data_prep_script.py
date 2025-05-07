@@ -27,10 +27,6 @@ try:
         # Get input and output paths
         input_path = config.get('data', {}).get('input_path', "data/raw/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv")
         output_dir = config.get('data', {}).get('output_dir', "data/processed")
-        # Get version control settings
-        # git_branch = config.get('version_control', {}).get('git_branch', "Austin")
-        # add_to_dvc = config.get('version_control', {}).get('add_to_dvc', True)
-        # create_git_tag = config.get('version_control', {}).get('create_git_tag', True)
     
     print(f"Using configuration from: {config_path}")
     print(f"Sample size: {sample_size}")
@@ -41,9 +37,6 @@ except Exception as e:
     print("Using default values")
     input_path = "data/raw/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv"
     output_dir = "data/processed"
-    # git_branch = "Austin"
-    # add_to_dvc = True
-    # create_git_tag = True
 
 os.makedirs(output_dir, exist_ok=True)
 
@@ -78,41 +71,5 @@ dataset_info = EcommerceDataProcessor.log_dataset_to_mlflow(
 # Save dataset reference for pipeline
 with open(f"{output_dir}/latest_dataset_ref.json", 'w') as f:
     json.dump(dataset_info, f)
-
-# if add_to_dvc:
-#     # Set Git identity before committing
-#     subprocess.run(["git", "config", "--global", "user.email", "hsupisces@Hotmail.com"], check=False)
-#     subprocess.run(["git", "config", "--global", "user.name", "ShenghaoisYummy"], check=False)
-#     subprocess.run(['git', 'config', '--global', 'credential.helper', 'store'], check=True)
-    
-#     try:
-#         with open(os.path.expanduser('~/.git-credentials'), 'w') as f:
-#             f.write(f"https://{os.environ['GIT_USERNAME']}:{os.environ['GIT_PASSWORD']}@github.com\n")
-
-#         # Skip DVC add since it's handled by the pipeline
-#         # Just create a file with metadata for reference
-#         with open(f"{output_path}.info", 'w') as f:
-#             f.write(f"Dataset processed at {timestamp}\n")
-#             f.write(f"Sample size: {sample_size}\n")
-#             f.write(f"Sample description: {sample_description}\n")
-        
-#         subprocess.run(["git", "add", f"{output_path}.info"], check=True)
-#         subprocess.run(["git", "commit", "-m", f"Add dataset info ({timestamp})"], check=True)
-
-#         # Create a tag for this dataset version
-#         if create_git_tag:
-#             tag_name = f"tag-{output_filename}"
-#             subprocess.run(["git", "tag", "-a", tag_name, "-m", f"Dataset processed at {timestamp}"], check=True)
-
-#         # Push changes
-#         subprocess.run(["git", "push", "origin", git_branch], check=True)
-#         if create_git_tag:
-#             subprocess.run(["git", "push", "--tags"], check=True)
-#             print(f"Dataset metadata tagged as: {tag_name}")
-#         else:
-#             print(f"Dataset metadata committed")
-#     except Exception as e:
-#         print(f"Error in Git operations: {e}")
-#         print("Processed data was saved but metadata not tracked in Git")
 
 print(f"Dataset processing completed: {output_filename}")
