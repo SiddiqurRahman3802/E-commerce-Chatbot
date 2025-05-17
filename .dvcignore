@@ -1,3 +1,41 @@
-# Add patterns of files dvc should ignore, which could improve
-# the performance. Learn more at
-# https://dvc.org/doc/user-guide/dvcignore
+# Add patterns of files dvc should ignore, which could otherwise be
+# tracked by git.
+# Based on .gitignore syntax.
+# For more info see https://dvc.org/doc/user-guide/dvcignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# DVC
+.ipynb_checkpoints
+*.tfevents.*
+
+# OS specific
+.DS_Store
+._.DS_Store
+._*
+
+# Editor/IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
