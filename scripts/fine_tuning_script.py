@@ -5,7 +5,9 @@ import os
 import torch
 from datetime import datetime
 import json
-
+import yaml
+import argparse
+import mlflow
 # Add the project root to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -46,9 +48,22 @@ print("mlflow")
 # Load environment variables
 load_dotenv()
 
+# Load configuration
+config_path = "/config/params.yaml"
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Data preprocessing and feature engineering with MLflow logging")
+    parser.add_argument("--config", type=str, default=config_path, help="Path to YAML config file defining cleaning and feature options")
+    parser.add_argument("--input-path", type=str, default="data/raw/bitext-retail-ecommerce-llm-chatbot-training-dataset.csv", help="Directory containing raw CSV data (expects raw.csv)")
+    parser.add_argument("--output-dir", type=str, default="data/processed", help="Directory to write processed data CSV")
+    parser.add_argument("--mlflow-uri", type=str, default="", help="MLflow Tracking Server URI")
+    return parser.parse_args()
+
 def main():
+
     # Load configuration
-    config = load_config()
+    with open(config_path, 'r') as config_file:
+        config = yaml.safe_load(config_file)
     
     # Set up environment and data
     if not setup_environment_data(config):
@@ -74,22 +89,15 @@ def main():
         # Save the full configuration with the run (exclude any sensitive data)
         # Make a copy to avoid modifying the original config
         safe_config = config.copy()
-        # Remove any sensitive fields that might have been added (should be using env vars anyway)
-        if 'aws' in safe_config:
-            if 'access_key' in safe_config['aws']:
-                safe_config['aws']['access_key'] = "*** REDACTED ***"
-            if 'secret_key' in safe_config['aws']:
-                safe_config['aws']['secret_key'] = "*** REDACTED ***"
         
-        run_config_path = os.path.join(run_output_dir, "config.yaml")
-        save_yaml_config(safe_config, run_config_path)
+        experiment_config_path = os.path.join(run_output_dir, "config.yaml")
+        save_yaml_config(safe_config, experiment_config_path)
         
         # Log configuration to MLflow
-        import mlflow
         # Use the flatten_config utility to get flattened parameters (from the safe config)
         flattened_params = flatten_config(safe_config)
         mlflow.log_params(flattened_params)
-        mlflow.log_artifact(run_config_path)
+        mlflow.log_artifact(experiment_config_path)
         
         # Configure device settings
         device_config = configure_device_settings(config)
@@ -116,18 +124,24 @@ def main():
         # Log model info
         mlflow_log_model_info(model)
         
+        
         # Prepare dataset
-
         # Load dataset reference
-        with open("data/processed/latest_dataset_ref.json", 'r') as f:
-            dataset_info = json.load(f)
+        try:
+            with open("data/processed/latest_dataset_ref.json", 'r') as f:
+                dataset_info = json.load(f)
+        except FileNotFoundError:
+            print("File does not exist. Please run the data preprocessing script first.")
+            # You can return, exit, or handle it in another way
+        except json.JSONDecodeError:
+            print("File content is not valid JSON. Please check or regenerate the file.")
+            # You can return, exit, or handle it in another way
 
         # Log dataset lineage in the model training run
         mlflow.log_param("dataset_run_id", dataset_info["mlflow_run_id"])
-
         # Use dataset path from the reference
         dataset_path = dataset_info["dataset_path"]
-        
+
         if not dataset_path:
             print("Dataset path not specified in config. Exiting.")
             return
@@ -206,6 +220,7 @@ def main():
             model_info = {
                 "mlflow_run_id": model_run_id or run_id,
                 "tracking_uri": mlflow.get_tracking_uri(),
+                "dvc_stage": "fine_tuning",  
                 "timestamp": run_timestamp,
                 "model_name": model_name,
                 "fine_tuned": True
@@ -253,4 +268,5 @@ def main():
         print(f"MLflow run ID: {run_id}")
 
 if __name__ == "__main__":
+    args = parse_args()
     main()
